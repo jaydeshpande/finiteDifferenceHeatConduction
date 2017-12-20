@@ -16,6 +16,6 @@ Usage:
 
 # SOLVER IS NOT VALIDATED #
 
-# Under Development#
+# Under Development #
 1. Boundary conditions 
 2. Exception handling 
