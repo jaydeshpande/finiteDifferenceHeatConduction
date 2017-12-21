@@ -23,6 +23,7 @@ class Heat_Equation(object):
                 self.boundaries = {}
                 self.bccoords = {}
                 self.isBoundaryApplied = {}
+                self.radPowi = {}
                 # For stability, this is the largest interval possible
                 # for the size of the time-step:
                 self.dt = self.dx2*self.dy2/( 2*a*(self.dx2+self.dy2) )
@@ -61,6 +62,13 @@ class Heat_Equation(object):
                 print ("Invalid boundary name: {}".format(boundary))
                 sys.exit(1)
         elif name == 'constant' and boundary == 'all':
+            try:
+                self.ui[self.bccoords[boundary]]= val
+                self.isBoundaryApplied[boundary] = 1
+            except KeyError:
+                print ("Invalid boundary name: {}".format(boundary))
+                sys.exit(1)
+
             self.ui[self.bccoords['up']]= val
             self.ui[self.bccoords['down']]= val
             self.ui[self.bccoords['left']]= val
@@ -68,55 +76,68 @@ class Heat_Equation(object):
             self.isBoundaryApplied['up'] = 1
             self.isBoundaryApplied['down'] = 1
             self.isBoundaryApplied['left'] = 1
-            self.isBoundaryApplied['right'] = 1            
+            self.isBoundaryApplied['right'] = 1      
+          
             #self.u = self.ui
         elif name == 'convection':
             Q = self.Q
             try:
+                # Regardless of boundary choice it defaults to constant first 
                 self.ui[self.bccoords[boundary]]= val
                 self.isBoundaryApplied[boundary] = 1
             except KeyError:
                 print ("Invalid boundary name: {}".format(boundary))
                 sys.exit(1)
+
             if boundary == 'left':
                 self.u[0,1:-1] = self.ui[0,1:-1] + self.a*self.dt*( (2*self.ui[1, 1:-1] - 2*(self.ui[0, 1:-1] + self.dx*((self.ui[1, 1:-1]-300)*3/1.9)))/self.dx2 + (self.ui[1, 2:] - 2*self.ui[1, 1:-1] + self.ui[1, :-2])/self.dy2 ) + self.dt*(Q/(753*2400))
             elif boundary == 'down':
                 self.u[1:-1,0] = self.ui[1:-1,0] + self.a*self.dt*( (2*self.ui[1:-1, 1] - 2*(self.ui[1:-1, 0] + self.dx*((self.ui[1:-1, 1]-300)*3/1.9)))/self.dx2 + (self.ui[2:, 1] - 2*self.ui[1:-1, 1] + self.ui[:-2, 1])/self.dy2 ) + self.dt*(Q/(753*2400))
+            elif boundary == 'right':
+                self.u[-1,1:-1] = self.ui[-1,1:-1] + self.a*self.dt*( (2*self.ui[-2, 1:-1] - 2*(self.ui[-1, 1:-1] + self.dx*((self.ui[-2, 1:-1]-300)*3/1.9)))/self.dx2 + (self.ui[-2, 2:] - 2*self.ui[-2, 1:-1] + self.ui[-2, :-2])/self.dy2 ) + self.dt*(Q/(753*2400))
+            elif boundary == 'up':
+                self.u[1:-1, -1] = self.ui[1:-1, -1] + self.a*self.dt*( (2*self.ui[1:-1, -2] - 2*(self.ui[1:-1, -1] + self.dx*((self.ui[1:-1, -2]-300)*3/1.9)))/self.dx2 + (self.ui[2:, -2] - 2*self.ui[1:-1, -2] + self.ui[:-2, 1])/self.dy2 ) + self.dt*(Q/(753*2400))
             else:
                 print ("Condition {} not implemented for boundary: {}".format(name, boundary))
                 sys.exit(1)
-        elif name == 'mixed':
-            try:
-                self.ui[self.bccoords[boundary]]= val
-                self.isBoundaryApplied[boundary] = 1
-            except KeyError:
-                print ("Invalid boundary name: {}".format(boundary))
-                sys.exit(1)
-            Q = self.Q
-            sigma =  5.6703e-8
-            radPowi = []
-            for i in range (0, self.nx):
-                radPowi.append(0.9*sigma*(pow(self.ui[0, i],4) - pow(300, 4)/1.9))
-
-            #((0.9*sigma/1.9)*(0))
-            self.u[0,1:-1] = self.ui[0,1:-1] + self.a*self.dt*( (2*self.ui[1, 1:-1] - 2*(self.ui[0, 1:-1] + self.dx*( (radPowi[1:-1]) + (self.ui[1, 1:-1]-300)*3/1.9)))/self.dx2 + (self.ui[1, 2:] - 2*self.ui[1, 1:-1] + self.ui[1, :-2])/self.dy2 ) + self.dt*(Q/(753*2400))
 
         elif name == 'mixed-test':
+            Q = self.Q
+            sigma =  5.6703e-8
             try:
+                # Regardless of boundary choice it defaults to constant first 
                 self.ui[self.bccoords[boundary]]= val
                 self.isBoundaryApplied[boundary] = 1
             except KeyError:
                 print ("Invalid boundary name: {}".format(boundary))
                 sys.exit(1)
-
-            Q = self.Q
-            sigma =  5.6703e-8
-            radPowi = []
-            for i in range (0, self.nx):
-                radPowi.append(0.9*sigma*(pow(self.ui[0, i],4) - pow(300, 4))/1.9)
             
-            #((0.9*sigma/1.9)*(0))
-            self.u[0,1:-1] = self.ui[0,1:-1] + self.a*self.dt*( (2*self.ui[1, 1:-1] - 2*(self.ui[0, 1:-1] + self.dx*( radPowi[1:-1] + (self.ui[1, 1:-1]-300)*3/1.9)))/self.dx2 + (self.ui[1, 2:] - 2*self.ui[1, 1:-1] + self.ui[1, :-2])/self.dy2 ) + self.dt*(Q/(753*2400))
+            if boundary == 'left':
+                self.radPowi[boundary] = []
+                for i in range (0, self.ny):
+                    self.radPowi[boundary].append(0.9*sigma*(pow(self.ui[0, i],4) - pow(300, 4))/1.9)
+                #((0.9*sigma/1.9)*(0))
+                self.u[0,1:-1] = self.ui[0,1:-1] + self.a*self.dt*( (2*self.ui[1, 1:-1] - 2*(self.ui[0, 1:-1] + self.dx*(self.radPowi[boundary][1:-1] + (self.ui[1, 1:-1]-300)*3/1.9)))/self.dx2 + (self.ui[1, 2:] - 2*self.ui[1, 1:-1] + self.ui[1, :-2])/self.dy2 ) + self.dt*(Q/(753*2400))
+            elif boundary == 'right':
+                self.radPowi[boundary] = []
+                for i in range (0, self.ny):
+                    self.radPowi[boundary].append(0.9*sigma*(pow(self.ui[-1, i],4) - pow(300, 4))/1.9)
+                #((0.9*sigma/1.9)*(0))
+                self.u[-1, 1:-1] = self.ui[-1, 1:-1] + self.a*self.dt*( (2*self.ui[-2, 1:-1] - 2*(self.ui[-1, 1:-1] + self.dx*(self.radPowi[boundary][1:-1] + (self.ui[-2, 1:-1]-300)*3/1.9)))/self.dx2 + (self.ui[-2, 2:] - 2*self.ui[-2, 1:-1] + self.ui[-2, :-2])/self.dy2 ) + self.dt*(Q/(753*2400))
+            elif boundary == 'down':
+                self.radPowi[boundary] = []
+                for i in range (0, self.nx):
+                    self.radPowi[boundary].append(0.9*sigma*(pow(self.ui[i, 0],4) - pow(300, 4))/1.9)
+                self.u[1:-1, 0] = self.ui[1:-1, 0] + self.a*self.dt*( (2*self.ui[1:-1, 1] - 2*(self.ui[1:-1, 0] + self.dx*(self.radPowi[boundary][1:-1] + (self.ui[1:-1, 1]-300)*3/1.9)))/self.dx2 + (self.ui[2:, 1] - 2*self.ui[1:-1, 1] + self.ui[:-2, 1])/self.dy2 ) + self.dt*(Q/(753*2400))
+            elif boundary == 'up':
+                self.radPowi[boundary] = []
+                for i in range (0, self.nx):
+                    self.radPowi[boundary].append(0.9*sigma*(pow(self.ui[i, -1],4) - pow(300, 4))/1.9)
+                #((0.9*sigma/1.9)*(0))
+                self.u[1:-1, -1] = self.ui[1:-1, -1] + self.a*self.dt*( (2*self.ui[1:-1, -2] - 2*(self.ui[1:-1, -1] + self.dx*(self.radPowi[boundary][1:-1] + (self.ui[1:-1, -2]-300)*3/1.9)))/self.dx2 + (self.ui[2:, -2] - 2*self.ui[1:-1, -2] + self.ui[:-2, -2])/self.dy2 ) + self.dt*(Q/(753*2400))
+            else:
+                print ("Condition {} not implemented for boundary: {}".format(name, boundary))
+                sys.exit(1)
 
     def evolve_ts(self):
         Q = self.Q
@@ -143,18 +164,19 @@ class Heat_Equation(object):
             if self.showPlots == 1:
                 plotter.on(self.u)
             self.evolve_ts()
-            self.set_boundary_condition('mixed-test',300, boundary = 'left')
-            self.set_boundary_condition('mixed-test',300, boundary = 'down')
+            plate.set_boundary_condition('mixed-test', 300,  boundary = 'down')
+            plate.set_boundary_condition('mixed-test', 300,  boundary = 'up')
+            #plate.set_boundary_condition('convection', 300,  boundary = 'up')
             self.handleCorners()
             self.nextTime()
         plotter.end()
 
 if __name__=="__main__":
-    plate = Heat_Equation(0.05, 0.05, 3.5e-7)
+    plate = Heat_Equation(0.1, 0.1, 3.5e-7)
     plate.showPlots = 1
     plate.set_heat_source(300)
-    plate.set_boundary_condition('mixed-test', 300,  boundary = 'left')
+    plate.set_boundary_condition('constant', 300,  boundary = 'right')
+    plate.set_boundary_condition('constant', 300,  boundary = 'left')
     plate.set_boundary_condition('mixed-test', 300,  boundary = 'down')
-    plate.set_boundary_condition('constant', 300, boundary = 'right')
-    plate.set_boundary_condition('constant', 300, boundary = 'up')
+    plate.set_boundary_condition('mixed-test', 300, boundary = 'up')
     plate.run(100)
